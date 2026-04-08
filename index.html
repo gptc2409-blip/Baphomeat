@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BAPHOM | Member Archive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; overflow-x: hidden; }
+        .reveal { opacity: 0; transform: translateY(20px); transition: all 0.8s ease-out; }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+        .modal { display: none; position: fixed; inset: 0; background: white; z-index: 100; overflow-y: auto; }
+        .modal.active { display: block; }
+        .cart-drawer { transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        input { border-radius: 0 !important; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #000; }
+    </style>
+</head>
+<body class="bg-white text-black selection:bg-black selection:text-white">
+
+    <nav class="fixed w-full z-50 px-6 py-6 flex justify-between items-center bg-white/90 backdrop-blur-md border-b border-gray-100">
+        <div class="flex-1 flex gap-6 text-[9px] font-bold tracking-[0.2em] items-center">
+            <a href="#shop" class="hidden md:block hover:opacity-50 transition">SHOP</a>
+            <a href="https://instagram.com/jona___tas" target="_blank" class="hover:opacity-50 transition uppercase">@jona___tas</a>
+        </div>
+        <div class="text-2xl font-black tracking-tighter cursor-pointer uppercase text-center" onclick="window.scrollTo(0,0)">
+            BAPHOM<span class="font-light italic text-gray-400"> STUDIO</span>
+        </div>
+        <div class="flex-1 flex justify-end gap-6 text-[9px] font-bold tracking-[0.2em] items-center uppercase">
+            <button id="userBtn" class="hover:opacity-50 transition">Account</button>
+            <button onclick="toggleCart()" class="hover:opacity-50 transition">Cart (<span id="cartCount">0</span>)</button>
+        </div>
+    </nav>
+
+    <div id="authModal" class="modal z-[150] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-[450px] p-10 relative">
+            <button onclick="toggleAuth()" class="absolute top-6 right-6 font-bold text-[10px] uppercase">[X]</button>
+            
+            <div id="loginForm">
+                <h2 class="text-3xl font-black tracking-tighter mb-8 uppercase">Login</h2>
+                <input type="email" id="loginEmail" placeholder="EMAIL" class="w-full border-b border-black py-4 text-[10px] outline-none mb-4 uppercase">
+                <input type="password" id="loginPass" placeholder="SENHA" class="w-full border-b border-black py-4 text-[10px] outline-none mb-8 uppercase">
+                <button onclick="handleLogin()" class="w-full bg-black text-white py-4 text-[10px] font-bold tracking-[0.4em] uppercase mb-6">Acessar Conta</button>
+                <p class="text-[9px] text-center tracking-widest text-gray-400">NÃO TEM CONTA? <button onclick="switchAuth()" class="text-black underline">CADASTRE-SE</button></p>
+            </div>
+
+            <div id="registerForm" class="hidden">
+                <h2 class="text-3xl font-black tracking-tighter mb-8 uppercase">Criar Conta</h2>
+                <input type="email" id="regEmail" placeholder="EMAIL" class="w-full border-b border-black py-4 text-[10px] outline-none mb-4 uppercase">
+                <input type="password" id="regPass" placeholder="SENHA" class="w-full border-b border-black py-4 text-[10px] outline-none mb-8 uppercase">
+                <button onclick="handleRegister()" class="w-full bg-black text-white py-4 text-[10px] font-bold tracking-[0.4em] uppercase mb-6">Cadastrar no Sistema</button>
+                <p class="text-[9px] text-center tracking-widest text-gray-400">JÁ TEM CONTA? <button onclick="switchAuth()" class="text-black underline">LOGIN</button></p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCfQR5oGS4oBAo8n2KHynFOxgUlnZvmwHM",
+            authDomain: "baphom-d0d13.firebaseapp.com",
+            projectId: "baphom-d0d13",
+            storageBucket: "baphom-d0d13.firebasestorage.app",
+            messagingSenderId: "404007926967",
+            appId: "1:404007926967:web:64bf534913a0af153ba132",
+            measurementId: "G-3B06HYF62Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // --- FUNÇÕES DE INTERFACE ---
+        window.toggleAuth = () => document.getElementById('authModal').classList.toggle('active');
+        window.switchAuth = () => {
+            document.getElementById('loginForm').classList.toggle('hidden');
+            document.getElementById('registerForm').classList.toggle('hidden');
+        };
+
+        // --- LÓGICA DE CADASTRO (FIREBASE) ---
+        window.handleRegister = async function () {
+            const email = document.getElementById('regEmail').value;
+            const pass = document.getElementById('regPass').value;
+            
+            if(!email || !pass) return alert("Por favor, preencha todos os campos.");
+            if(pass.length < 6) return alert("A senha deve ter no mínimo 6 caracteres.");
+
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+                alert("Sucesso! Usuário cadastrado no banco de dados.");
+                toggleAuth();
+            } catch (err) {
+                console.error(err.code);
+                if(err.code === 'auth/email-already-in-use') alert("Este e-mail já está em uso.");
+                else alert("Erro: " + err.message);
+            }
+        };
+
+        // --- LÓGICA DE LOGIN (FIREBASE) ---
+        window.handleLogin = async function () {
+            const email = document.getElementById('loginEmail').value;
+            const pass = document.getElementById('loginPass').value;
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+                toggleAuth();
+            } catch (err) {
+                alert("Falha na autenticação: Verifique e-mail e senha.");
+            }
+        };
+
+        // --- LOGOUT ---
+        window.handleLogout = () => {
+            if(confirm("Deseja encerrar a sessão?")) signOut(auth);
+        };
+
+        // --- MONITOR DE ESTADO DO USUÁRIO ---
+        onAuthStateChanged(auth, (user) => {
+            const userBtn = document.getElementById('userBtn');
+            if (user) {
+                userBtn.innerText = user.email.split('@')[0].toUpperCase();
+                userBtn.onclick = handleLogout;
+            } else {
+                userBtn.innerText = 'Account';
+                userBtn.onclick = toggleAuth;
+            }
+        });
+
+        // --- LÓGICA DO CARRINHO (LOCALSTORAGE PARA OS ITENS) ---
+        // (Aqui você mantém suas funções updateCart, openProduct, etc.)
+        // Apenas certifique-se de que NÃO existam outras tags <script> repetindo handleRegister lá embaixo.
+    </script>
+</body>
+</html>
